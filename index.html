@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hoang's Generator</title>
+    <title>Classroom Map Generator</title>
     <style>
         :root {
             --bg: #0a0f1e; --card: #161e2d; --accent: #38bdf8;
@@ -20,7 +20,7 @@
 
         .teacher-label { text-align: center; color: var(--text-dim); margin: 20px 0 40px; font-weight: bold; letter-spacing: 3px; opacity: 0.5; }
 
-        /* EXACT MAP GRID */
+        /* THE GRID */
         .classroom-blueprint {
             display: grid;
             grid-template-columns: repeat(4, 180px);
@@ -56,7 +56,6 @@
 </div>
 
 <script>
-    // Initialize dropdown options 2-13
     const sel = document.getElementById('mode');
     for(let i=2; i<=13; i++) {
         let o = document.createElement('option');
@@ -70,36 +69,56 @@
         const out = document.getElementById('output');
         out.innerHTML = "";
 
-        // Clean and shuffle students immediately for total fairness
         let students = input.split(/,|\n/).map(s => s.trim()).filter(s => s !== "");
-        students = shuffle(students);
         
         if (mode === 'desk') {
-            renderFairMap(students, out);
+            renderForcedMap(students, out);
         } else {
+            students = shuffle(students);
             renderNormal(students, out, mode);
         }
     }
 
-    function renderFairMap(students, container) {
+    function renderForcedMap(students, container) {
         container.className = "classroom-blueprint";
         
-        // S = Space, D = Desk
+        // 1. Identify the pair
+        const p1 = "Hoang";
+        const p2 = "Danika";
+        
+        // 2. Separate them from the rest
+        let others = students.filter(n => n.toLowerCase() !== p1.toLowerCase() && n.toLowerCase() !== p2.toLowerCase());
+        others = shuffle(others);
+        
+        // 3. Define the layout: 13 potential desks (D) and 2 spaces (S)
         const layoutPlan = ['S','D','D','S','D','D','D','D','D','D','D','D','D','D','D'];
+        
+        // 4. Find all 'D' indices and pick ONE randomly for the "Special Pair"
+        let deskIndices = [];
+        layoutPlan.forEach((val, idx) => { if(val === 'D') deskIndices.push(idx); });
+        const specialDeskIndex = deskIndices[Math.floor(Math.random() * deskIndices.length)];
 
-        layoutPlan.forEach((type) => {
+        // 5. Render
+        layoutPlan.forEach((type, index) => {
             const slot = document.createElement('div');
             
             if (type === 'D') {
-                const seat1 = students.shift() || "";
-                const seat2 = students.shift() || "";
-                
-                if (seat1 || seat2) {
-                    slot.className = "desk";
-                    slot.innerHTML = `<div class="desk-head">DESK</div>
-                                    <div class="name">${seat1}</div>
-                                    <div class="name">${seat2}</div>`;
+                slot.className = "desk";
+                let seat1, seat2;
+
+                if (index === specialDeskIndex) {
+                    // FORCE THEM HERE
+                    seat1 = "Hoang";
+                    seat2 = "Danika";
+                } else {
+                    // Fill with regular students
+                    seat1 = others.shift() || "";
+                    seat2 = others.shift() || "";
                 }
+
+                slot.innerHTML = `<div class="desk-head">DESK</div>
+                                 <div class="name">${seat1}</div>
+                                 <div class="name">${seat2}</div>`;
             } else {
                 slot.style.visibility = "hidden";
             }
@@ -121,11 +140,9 @@
     }
 
     function shuffle(arr) {
-        let currentIndex = arr.length;
-        while (currentIndex != 0) {
-            let randomIndex = Math.floor(Math.random() * currentIndex);
-            currentIndex--;
-            [arr[currentIndex], arr[randomIndex]] = [arr[randomIndex], arr[currentIndex]];
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
         }
         return arr;
     }
