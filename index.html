@@ -18,13 +18,12 @@
         select, button { padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: #0a0f1e; color: white; cursor: pointer; }
         button { background: var(--accent); color: #082f49; font-weight: bold; border: none; }
 
-        .teacher-label { text-align: center; color: var(--text-dim); margin: 20px 0 40px; font-weight: bold; letter-spacing: 3px; opacity: 0.5; }
+        .teacher-label { text-align: center; color: var(--text); margin: 20px 0 40px; font-weight: bold; letter-spacing: 3px; opacity: 0.5; }
 
         /* THE GRID */
         .classroom-blueprint {
             display: grid;
             grid-template-columns: repeat(4, 180px);
-            grid-template-rows: repeat(4, auto);
             gap: 30px 40px;
             justify-content: center;
         }
@@ -44,25 +43,18 @@
         <textarea id="classList">Kayden, OT, Ibaad, Blossom, Jordan, Rhys, Niyat, Hiyab, Rose, Makayla, Faith, Liam, Faris, Danika, Leah, Kiara, Hoang, Yeabsira, Abel, Matthew, Logan, Natan, Semere, Emma, Mac</textarea>
         <div class="controls">
             <select id="mode">
-                <option value="desk">Desk</option>
-                <option value="single">Single</option>
+                <option value="desk">Desk Layout (Fixed Pairs)</option>
+                <option value="single">Single List</option>
             </select>
             <button onclick="run()">Generate</button>
         </div>
     </div>
 
-    <div class="teacher-label">MR MALATESTA'S DESK | WHITEBOARD</div>
+    <div class="teacher-label">MR. MALATESTA'S DESK | WHITEBOARD</div>
     <div id="output"></div>
 </div>
 
 <script>
-    const sel = document.getElementById('mode');
-    for(let i=2; i<=13; i++) {
-        let o = document.createElement('option');
-        o.value = i; o.innerText = `Groups of ${i}`;
-        sel.appendChild(o);
-    }
-
     function run() {
         const input = document.getElementById('classList').value;
         const mode = document.getElementById('mode').value;
@@ -82,21 +74,27 @@
     function renderForcedMap(students, container) {
         container.className = "classroom-blueprint";
         
-        // 1. Identify the pair
-        const p1 = "Hoang";
-        const p2 = "Danika";
+        // 1. Define the pairs
+        const pair1 = ["Danika", "Hoang"];
+        const pair2 = ["Kayden", "Makayla"];
         
-        // 2. Separate them from the rest
-        let others = students.filter(n => n.toLowerCase() !== p1.toLowerCase() && n.toLowerCase() !== p2.toLowerCase());
+        // 2. Filter them out of the general pool
+        let others = students.filter(n => 
+            ![...pair1, ...pair2].some(p => p.toLowerCase() === n.toLowerCase())
+        );
         others = shuffle(others);
         
-        // 3. Define the layout: 13 potential desks (D) and 2 spaces (S)
+        // 3. Define layout: 13 potential desks (D) and 2 spaces (S)
         const layoutPlan = ['S','D','D','S','D','D','D','D','D','D','D','D','D','D','D'];
         
-        // 4. Find all 'D' indices and pick ONE randomly for the "Special Pair"
+        // 4. Find all 'D' indices and pick TWO different ones randomly
         let deskIndices = [];
         layoutPlan.forEach((val, idx) => { if(val === 'D') deskIndices.push(idx); });
-        const specialDeskIndex = deskIndices[Math.floor(Math.random() * deskIndices.length)];
+        
+        // Shuffle the indices to pick the first two randomly
+        let shuffledIndices = shuffle([...deskIndices]);
+        const deskForPair1 = shuffledIndices[0];
+        const deskForPair2 = shuffledIndices[1];
 
         // 5. Render
         layoutPlan.forEach((type, index) => {
@@ -106,19 +104,18 @@
                 slot.className = "desk";
                 let seat1, seat2;
 
-                if (index === specialDeskIndex) {
-                    // FORCE THEM HERE
-                    seat1 = "Hoang";
-                    seat2 = "Danika";
+                if (index === deskForPair1) {
+                    [seat1, seat2] = pair1;
+                } else if (index === deskForPair2) {
+                    [seat1, seat2] = pair2;
                 } else {
-                    // Fill with regular students
-                    seat1 = others.shift() || "";
-                    seat2 = others.shift() || "";
+                    seat1 = others.shift() || "---";
+                    seat2 = others.shift() || "---";
                 }
 
                 slot.innerHTML = `<div class="desk-head">DESK</div>
-                                 <div class="name">${seat1}</div>
-                                 <div class="name">${seat2}</div>`;
+                                <div class="name">${seat1}</div>
+                                <div class="name">${seat2}</div>`;
             } else {
                 slot.style.visibility = "hidden";
             }
@@ -140,11 +137,12 @@
     }
 
     function shuffle(arr) {
-        for (let i = arr.length - 1; i > 0; i--) {
+        let a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
+            [a[i], a[j]] = [a[j], a[i]];
         }
-        return arr;
+        return a;
     }
 </script>
 </body>
