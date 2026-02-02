@@ -33,7 +33,7 @@
         .name { padding: 10px; border-bottom: 1px solid var(--border); font-size: 15px; min-height: 18px; }
         .name:last-child { border: none; }
 
-        .grid-standard { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
+        .grid-standard { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
     </style>
 </head>
 <body>
@@ -43,9 +43,9 @@
         <textarea id="classList">Kayden, OT, Ibaad, Blossom, Jordan, Rhys, Niyat, Hiyab, Rose, Makayla, Faith, Liam, Faris, Danika, Leah, Kiara, Hoang, Yeabsira, Abel, Matthew, Logan, Natan, Semere, Emma, Mac</textarea>
         <div class="controls">
             <select id="mode">
-                <option value="desk">Desk Layout (Fixed Pairs)</option>
+                <option value="desk">Desk Layout</option>
                 <option value="single">Single List</option>
-            </select>
+                </select>
             <button onclick="run()">Generate</button>
         </div>
     </div>
@@ -55,6 +55,15 @@
 </div>
 
 <script>
+    // POPULATE SELECT LIST FROM 3 TO 13
+    const modeSelect = document.getElementById('mode');
+    for (let i = 3; i <= 13; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Groups of ${i}`;
+        modeSelect.appendChild(opt);
+    }
+
     function run() {
         const input = document.getElementById('classList').value;
         const mode = document.getElementById('mode').value;
@@ -74,32 +83,25 @@
     function renderForcedMap(students, container) {
         container.className = "classroom-blueprint";
         
-        // 1. Define the pairs
+        // Fixed Pairs
         const pair1 = ["Danika", "Hoang"];
         const pair2 = ["Kayden", "Makayla"];
         
-        // 2. Filter them out of the general pool
         let others = students.filter(n => 
             ![...pair1, ...pair2].some(p => p.toLowerCase() === n.toLowerCase())
         );
         others = shuffle(others);
         
-        // 3. Define layout: 13 potential desks (D) and 2 spaces (S)
         const layoutPlan = ['S','D','D','S','D','D','D','D','D','D','D','D','D','D','D'];
-        
-        // 4. Find all 'D' indices and pick TWO different ones randomly
         let deskIndices = [];
         layoutPlan.forEach((val, idx) => { if(val === 'D') deskIndices.push(idx); });
         
-        // Shuffle the indices to pick the first two randomly
         let shuffledIndices = shuffle([...deskIndices]);
         const deskForPair1 = shuffledIndices[0];
         const deskForPair2 = shuffledIndices[1];
 
-        // 5. Render
         layoutPlan.forEach((type, index) => {
             const slot = document.createElement('div');
-            
             if (type === 'D') {
                 slot.className = "desk";
                 let seat1, seat2;
