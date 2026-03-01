@@ -17,6 +17,7 @@
         .controls { display: flex; gap: 10px; }
         select, button { padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: #0a0f1e; color: white; cursor: pointer; }
         button { background: var(--accent); color: #082f49; font-weight: bold; border: none; }
+        .btn-print { background: #64748b; color: white; margin-left: auto; }
 
         .teacher-label { text-align: center; color: var(--text-dim); margin: 20px 0 40px; font-weight: bold; letter-spacing: 3px; opacity: 0.5; }
 
@@ -35,6 +36,15 @@
         .name:last-child { border: none; }
 
         .grid-standard { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
+
+        @media print {
+            .panel, .btn-print { display: none !important; }
+            body { background: white; color: black; }
+            .desk { border: 1px solid #ccc; box-shadow: none; background: white; page-break-inside: avoid; }
+            .desk-head { color: black; border-bottom: 1px solid #ccc; background: #f0f0f0; }
+            .name { border-bottom: 1px solid #ccc; color: black; }
+            .teacher-label { color: black; opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -48,6 +58,7 @@
                 <option value="single">Single</option>
             </select>
             <button onclick="run()">Generate</button>
+            <button class="btn-print" onclick="window.print()">Print Results</button>
         </div>
     </div>
 
@@ -56,6 +67,22 @@
 </div>
 
 <script>
+    // --- CONFIGURATION (EDITABLE) ---
+    // Rule 1: Auto-pair these students together
+    const autoPairs = [
+        ['Hoang', 'Liam'],
+        ['Emma', 'Jordan']
+    ];
+
+    // Rule 2: Avoid pairing these students together
+    // Format: 'StudentName': ['Avoid1', 'Avoid2']
+    const avoidPairs = {
+        'Emma': ['Danika', 'Abel'],
+        'Abel': ['Emma', 'Danika'],
+        'Danika': ['Emma', 'Abel', 'Ibaad']
+    };
+    // --------------------------------
+
     // Initialize dropdown options 2-13
     const sel = document.getElementById('mode');
     for(let i=2; i<=13; i++) {
@@ -70,30 +97,81 @@
         const out = document.getElementById('output');
         out.innerHTML = "";
 
-        // Clean and shuffle students immediately for total fairness
         let students = input.split(/,|\n/).map(s => s.trim()).filter(s => s !== "");
-        students = shuffle(students);
         
+        // Apply grouping logic considering rules
+        const groupSize = (mode === 'desk' || mode === 'single') ? 2 : parseInt(mode);
+        let finalGroups = generateSmartGroups(students, groupSize);
+        
+        // SHUFFLE GROUPS: This ensures forced pairs move to random desk locations
+        finalGroups = shuffle(finalGroups);
+        
+        // Flatten for Desk mode if needed, or keep for Normal mode
         if (mode === 'desk') {
-            renderFairMap(students, out);
+            renderFairMap(finalGroups.flat(), out);
+        } else if (mode === 'single') {
+            renderNormal(shuffle(students), out, 'single');
         } else {
-            renderNormal(students, out, mode);
+            renderNormalGroups(finalGroups, out);
         }
+    }
+
+    function generateSmartGroups(allStudents, size) {
+        let pool = shuffle([...allStudents]);
+        let groups = [];
+
+        // 1. Process Auto-Pairs
+        autoPairs.forEach(pair => {
+            const group = [];
+            pair.forEach(name => {
+                const idx = pool.indexOf(name);
+                if (idx !== -1) group.push(pool.splice(idx, 1)[0]);
+            });
+            if (group.length > 0) groups.push(group);
+        });
+
+        // 2. Process Remaining with Avoid Logic
+        while (pool.length > 0) {
+            let currentGroup = groups.find(g => g.length < size);
+            if (!currentGroup) {
+                currentGroup = [];
+                groups.push(currentGroup);
+            }
+
+            let foundMatch = false;
+            for (let i = 0; i < pool.length; i++) {
+                const candidate = pool[i];
+                const shouldAvoid = currentGroup.some(member => {
+                    const avoidList = avoidPairs[member] || [];
+                    const reverseAvoid = avoidPairs[candidate] || [];
+                    return avoidList.includes(candidate) || reverseAvoid.includes(member);
+                });
+
+                if (!shouldAvoid) {
+                    currentGroup.push(pool.splice(i, 1)[0]);
+                    foundMatch = true;
+                    break;
+                }
+            }
+
+            if (!foundMatch) {
+                currentGroup.push(pool.shift());
+            }
+        }
+        return groups;
     }
 
     function renderFairMap(students, container) {
         container.className = "classroom-blueprint";
-        
-        // S = Space, D = Desk
-        const layoutPlan = ['S','D','D','S','D','D','D','D','D','D','D','D','D','D','D'];
+        // S = Space (Hidden), D = Desk
+        const layoutPlan = ['S','D','D','S','D','D','D','D','D','D','D','S','D','D','D','D'];
+        let studentCopy = [...students];
 
         layoutPlan.forEach((type) => {
             const slot = document.createElement('div');
-            
             if (type === 'D') {
-                const seat1 = students.shift() || "";
-                const seat2 = students.shift() || "";
-                
+                const seat1 = studentCopy.shift() || "";
+                const seat2 = studentCopy.shift() || "";
                 if (seat1 || seat2) {
                     slot.className = "desk";
                     slot.innerHTML = `<div class="desk-head">DESK</div>
@@ -118,6 +196,17 @@
                             group.map(n => `<div class="name">${n}</div>`).join('');
             container.appendChild(div);
         }
+    }
+
+    function renderNormalGroups(groups, container) {
+        container.className = "grid-standard";
+        groups.forEach((group, i) => {
+            const div = document.createElement('div');
+            div.className = "desk";
+            div.innerHTML = `<div class="desk-head">GROUP ${i + 1}</div>` + 
+                            group.map(n => `<div class="name">${n}</div>`).join('');
+            container.appendChild(div);
+        });
     }
 
     function shuffle(arr) {
